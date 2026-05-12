@@ -109,5 +109,3 @@ For inquiries & support, reach out via:
 *(Paid Consultations)* only
 
 📧 Email: hr@stackverify.site
-
-📱 WhatsApp: https://wa.me/254768974189
