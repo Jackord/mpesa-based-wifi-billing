@@ -50,11 +50,14 @@ const stkPush = async (phone, amount, transactionId) => {
     const timestamp = moment().format("YYYYMMDDHHmmss");
     const password = Buffer.from(`${process.env.MPESA_SHORTCODE}${process.env.MPESA_PASSKEY}${timestamp}`).toString("base64");
 
+    // ✅ Aligned TransactionType for Buy Goods Tills on production
+    const transactionType = MPESA_ENV === "production" ? "CustomerBuyGoodsOnline" : "CustomerPayBillOnline";
+
     const payload = {
         BusinessShortCode: process.env.MPESA_SHORTCODE,
         Password: password,
         Timestamp: timestamp,
-        TransactionType: "CustomerPayBillOnline",
+        TransactionType: transactionType,
         Amount: amount,
         PartyA: phone,
         PartyB: process.env.MPESA_SHORTCODE,
@@ -66,7 +69,9 @@ const stkPush = async (phone, amount, transactionId) => {
 
     try {
         console.log("📤 Sending STK Push...");
-        const response = await axios.post(`${MPESA_BASE_URL}/mpesa/stkpush/v1/processrequest`, payload, {
+        
+        // ✅ Updated URL path from v1 to v2 to prevent the 404 response
+        const response = await axios.post(`${MPESA_BASE_URL}/mpesa/stkpush/v2/processrequest`, payload, {
             headers: { Authorization: `Bearer ${accessToken}` }
         });
 
