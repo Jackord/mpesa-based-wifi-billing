@@ -50,14 +50,20 @@ const stkPush = async (phone, amount, transactionId) => {
     const timestamp = moment().format("YYYYMMDDHHmmss");
     const password = Buffer.from(`${process.env.MPESA_SHORTCODE}${process.env.MPESA_PASSKEY}${timestamp}`).toString("base64");
 
+    // Live Buy Goods Till environments require "CustomerBuyGoodsOnline"
+    const transactionType = MPESA_ENV === "production" ? "CustomerBuyGoodsOnline" : "CustomerPayBillOnline";
+    
+    // In production, PartyB must be your 7-digit Till Number. Otherwise, default to the shortcode.
+    const partyB = MPESA_ENV === "production" ? (process.env.MPESA_TILL_NUMBER || process.env.MPESA_SHORTCODE) : process.env.MPESA_SHORTCODE;
+
     const payload = {
-        BusinessShortCode: process.env.MPESA_SHORTCODE,
+        BusinessShortCode: process.env.MPESA_SHORTCODE, // 💻 This will be your Store Number (9201788)
         Password: password,
         Timestamp: timestamp,
-        TransactionType: "CustomerPayBillOnline", // ✅ Kept standard as required by Daraja's gateway rules
+        TransactionType: transactionType,
         Amount: amount,
         PartyA: phone,
-        PartyB: process.env.MPESA_SHORTCODE,
+        PartyB: partyB, // 🏪 This will be your Till Number (9218852)
         PhoneNumber: phone,
         CallBackURL: process.env.MPESA_CALLBACK_URL,
         AccountReference: "WiFi Payment",
@@ -65,7 +71,7 @@ const stkPush = async (phone, amount, transactionId) => {
     };
 
     try {
-        console.log("📤 Sending STK Push...");
+        console.log("📤 Sending STK Push with updated Buy Goods layout...");
         
         const response = await axios.post(`${MPESA_BASE_URL}/mpesa/stkpush/v1/processrequest`, payload, {
             headers: { Authorization: `Bearer ${accessToken}` }
