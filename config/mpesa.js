@@ -48,25 +48,28 @@ const stkPush = async (phone, amount, transactionId) => {
     }
 
     const timestamp = moment().format("YYYYMMDDHHmmss");
-    const password = Buffer.from(`${process.env.MPESA_SHORTCODE}${process.env.MPESA_PASSKEY}${timestamp}`).toString("base64");
+    
+    // 🔑 FIX: Password MUST be generated using the Store Number (9201788) for live Till apps!
+    const passwordShortCode = MPESA_ENV === "production" ? process.env.MPESA_SHORTCODE : process.env.MPESA_SHORTCODE;
+    const password = Buffer.from(`${passwordShortCode}${process.env.MPESA_PASSKEY}${timestamp}`).toString("base64");
 
-    // ✅ Rule 1: Set correct Transaction Type for production Till configuration
+    // ✅ Set correct Transaction Type for production Till configuration
     const transactionType = MPESA_ENV === "production" ? "CustomerBuyGoodsOnline" : "CustomerPayBillOnline";
     
-    // ✅ Rule 2: In production, BusinessShortCode must be your HEAD OFFICE number (4054193)
+    // ✅ In production, BusinessShortCode must pass your HEAD OFFICE number (4054193)
     const businessShortCode = MPESA_ENV === "production" ? (process.env.MPESA_HEAD_OFFICE || process.env.MPESA_SHORTCODE) : process.env.MPESA_SHORTCODE;
 
-    // ✅ Rule 3: In production, PartyB must be your public TILL number (9218852)
+    // ✅ In production, PartyB must be your public TILL number (9218852)
     const partyB = MPESA_ENV === "production" ? (process.env.MPESA_TILL_NUMBER || process.env.MPESA_SHORTCODE) : process.env.MPESA_SHORTCODE;
 
     const payload = {
-        BusinessShortCode: businessShortCode, // 🏢 Handles Head Office or standard shortcode dynamically
-        Password: password,
+        BusinessShortCode: businessShortCode, // 🏢 Production: 4054193 (Head Office)
+        Password: password,                   // 🔑 Encrypted using: 9201788 (Store Number)
         Timestamp: timestamp,
         TransactionType: transactionType,      // 🛒 CustomerBuyGoodsOnline
         Amount: amount,
         PartyA: phone,
-        PartyB: partyB,                       // 🏪 Target Public Till Number
+        PartyB: partyB,                       // 🏪 Production: 9218852 (Till Number)
         PhoneNumber: phone,
         CallBackURL: process.env.MPESA_CALLBACK_URL,
         AccountReference: "WiFi Payment",
@@ -74,7 +77,7 @@ const stkPush = async (phone, amount, transactionId) => {
     };
 
     try {
-        console.log(`📤 Sending STK Push via type [${transactionType}] using Shortcode [${businessShortCode}] to PartyB [${partyB}]...`);
+        console.log(`📤 Sending STK Push via type [${transactionType}] using Shortcode [${businessShortCode}]...`);
         
         const response = await axios.post(`${MPESA_BASE_URL}/mpesa/stkpush/v1/processrequest`, payload, {
             headers: { Authorization: `Bearer ${accessToken}` }
