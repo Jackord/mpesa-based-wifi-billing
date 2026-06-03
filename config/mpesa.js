@@ -49,27 +49,29 @@ const stkPush = async (phone, amount, transactionId) => {
 
     const timestamp = moment().format("YYYYMMDDHHmmss");
     
-    // 🔑 FIX: Password MUST be generated using the Store Number (9201788) for live Till apps!
-    const passwordShortCode = MPESA_ENV === "production" ? process.env.MPESA_SHORTCODE : process.env.MPESA_SHORTCODE;
-    const password = Buffer.from(`${passwordShortCode}${process.env.MPESA_PASSKEY}${timestamp}`).toString("base64");
+    // 🔑 PASSWORD ENCRYPTION: Must use the app-linked Store Number (9201788) in production
+    const cryptoShortcode = MPESA_ENV === "production" ? "9201788" : process.env.MPESA_SHORTCODE;
+    
+    // Generate base64 password
+    const password = Buffer.from(`${cryptoShortcode}${process.env.MPESA_PASSKEY.trim()}${timestamp}`).toString("base64");
 
-    // ✅ Set correct Transaction Type for production Till configuration
+    // 🔄 TRANSACTION TYPE: Buy Goods layout for live till environments
     const transactionType = MPESA_ENV === "production" ? "CustomerBuyGoodsOnline" : "CustomerPayBillOnline";
     
-    // ✅ In production, BusinessShortCode must pass your HEAD OFFICE number (4054193)
-    const businessShortCode = MPESA_ENV === "production" ? (process.env.MPESA_HEAD_OFFICE || process.env.MPESA_SHORTCODE) : process.env.MPESA_SHORTCODE;
+    // 🏢 BUSINESS SHORTCODE: Must pass the Head Office code (4054193) in production
+    const businessShortCode = MPESA_ENV === "production" ? "4054193" : process.env.MPESA_SHORTCODE;
 
-    // ✅ In production, PartyB must be your public TILL number (9218852)
-    const partyB = MPESA_ENV === "production" ? (process.env.MPESA_TILL_NUMBER || process.env.MPESA_SHORTCODE) : process.env.MPESA_SHORTCODE;
+    // 🏪 PARTY B: Must pass the targeted Public Till Number (9218852) in production
+    const partyB = MPESA_ENV === "production" ? "9218852" : process.env.MPESA_SHORTCODE;
 
     const payload = {
-        BusinessShortCode: businessShortCode, // 🏢 Production: 4054193 (Head Office)
-        Password: password,                   // 🔑 Encrypted using: 9201788 (Store Number)
+        BusinessShortCode: businessShortCode, 
+        Password: password,                   
         Timestamp: timestamp,
-        TransactionType: transactionType,      // 🛒 CustomerBuyGoodsOnline
+        TransactionType: transactionType,      
         Amount: amount,
         PartyA: phone,
-        PartyB: partyB,                       // 🏪 Production: 9218852 (Till Number)
+        PartyB: partyB,                       
         PhoneNumber: phone,
         CallBackURL: process.env.MPESA_CALLBACK_URL,
         AccountReference: "WiFi Payment",
