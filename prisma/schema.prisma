@@ -17,16 +17,16 @@ model Admin {
 }
 
 model User {
-  id            Int      @id @default(autoincrement())
-  phone         String   @unique
-  macAddress    String
-  status        String
+  id             Int       @id @default(autoincrement())
+  phone          String    @unique
+  macAddress     String
+  status         String
   currentPackage String? 
-  expiresAt     DateTime?
-  totalSpent    Int      @default(0)
-  sessionsCount Int      @default(0)
-  lastSeen      DateTime?
-  payments      Payment[]
+  expiresAt      DateTime?
+  totalSpent     Int       @default(0)
+  sessionsCount  Int       @default(0)
+  lastSeen       DateTime?
+  payments       Payment[]
 }
 
 model Payment {
@@ -36,6 +36,8 @@ model Payment {
   transactionId String   @unique
   macAddress    String
   status        String
+  package       String?  // 👈 Added to safely store the package selection
+  speed         String?  // 👈 Added to safely store the package speed selection
   timePurchased DateTime @default(now())
   mpesaRef      String?
   expiresAt     DateTime?
