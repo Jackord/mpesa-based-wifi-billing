@@ -1,14 +1,14 @@
 const express = require("express");
-const crypto = require("crypto"); // Built-in Node.js module for clean random IDs
+const crypto = require("crypto"); 
 const { stkPush } = require("../config/mpesa");
 const prisma = require("../config/prismaClient");
 
 const router = express.Router();
 
-// Initiate payment - aligns perfectly with Frontend expectations
+// Initiate payment
 router.post("/payments/initiate", async (req, res) => {
   try {
-    const { phone, amount, macAddress, package: pkg, speed } = req.body || {};
+    const { phone, amount, macAddress } = req.body || {};
 
     if (!phone || !amount || !macAddress) {
       return res.status(400).json({
@@ -17,9 +17,8 @@ router.post("/payments/initiate", async (req, res) => {
       });
     }
 
-    // Accept +2547XXXXXXXX, 2547XXXXXXXX, 07XXXXXXXX, 01XXXXXXXX, or 2541XXXXXXXX
+    // Normalize phone format
     let normalizedPhone = phone.trim().replace(/\+/g, '');
-    
     if (normalizedPhone.startsWith('0')) {
       normalizedPhone = '254' + normalizedPhone.slice(1);
     }
@@ -31,27 +30,24 @@ router.post("/payments/initiate", async (req, res) => {
       });
     }
 
-    // Generate a short, highly unique ID that will never violate primary key constraints
-    const uniqueSuffix = crypto.randomBytes(4).toString("hex").toUpperCase(); // e.g., "A1B2C3D4"
+    // Generate a guaranteed unique ID to prevent primary key duplicate crashes
+    const uniqueSuffix = crypto.randomBytes(4).toString("hex").toUpperCase(); 
     const transactionId = `TXN_${Date.now()}_${uniqueSuffix}`;
 
-    // Create entry in database securely matching the schema definitions
+    // ✅ FIXED: Only saves fields that we are 100% sure exist in your database tables right now
     await prisma.payment.create({
       data: {
         transactionId: transactionId,
         phone: normalizedPhone,
         amount: Number(amount),
         macAddress: macAddress,
-        status: "pending",
-        package: pkg || null,     // ✅ Safely passes package selection to DB matching Prisma schema field name
-        speed: speed || null      // ✅ Optional network speed tracker
+        status: "pending"
       }
     });
 
-    // Fire the M-Pesa API push
+    // Fire the M-Pesa API push out to Safaricom Daraja
     const mpesaResponse = await stkPush(normalizedPhone, amount, transactionId);
 
-    // If Safaricom gateway failed to answer completely
     if (!mpesaResponse) {
       return res.status(500).json({
         success: false,
@@ -59,7 +55,7 @@ router.post("/payments/initiate", async (req, res) => {
       });
     }
 
-    // Persist CheckoutRequestID for callback correlation
+    // Save CheckoutRequestID for callback mapping
     try {
       const checkoutId = mpesaResponse.CheckoutRequestID || null;
       if (checkoutId) {
@@ -72,7 +68,6 @@ router.post("/payments/initiate", async (req, res) => {
       console.error("Failed to persist mpesa_ref:", e);
     }
 
-    // Return clean JSON data to the frontend
     return res.status(200).json({
       success: true,
       message: "STK Push sent successfully!",
@@ -89,7 +84,7 @@ router.post("/payments/initiate", async (req, res) => {
   }
 });
 
-// Check payment status - aligns with Frontend apiClient.checkPaymentStatus
+// Check payment status
 router.get("/payments/status/:transactionId", async (req, res) => {
   try {
     const { transactionId } = req.params;
