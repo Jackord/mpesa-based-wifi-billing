@@ -36,8 +36,6 @@ model Payment {
   transactionId String   @unique
   macAddress    String
   status        String
-  package       String?  // 👈 Added to safely store the package selection
-  speed         String?  // 👈 Added to safely store the package speed selection
   timePurchased DateTime @default(now())
   mpesaRef      String?
   expiresAt     DateTime?
