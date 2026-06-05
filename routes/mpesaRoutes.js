@@ -1,5 +1,5 @@
 const express = require("express");
-const crypto = require("crypto"); // 🌐 Built-in Node.js module for secure random IDs
+const crypto = require("crypto"); // Built-in Node.js module for clean random IDs
 const { stkPush } = require("../config/mpesa");
 const prisma = require("../config/prismaClient");
 
@@ -31,18 +31,20 @@ router.post("/payments/initiate", async (req, res) => {
       });
     }
 
-    // ✅ FIX: Generate a short, highly unique ID that will never violate primary key constraints
+    // Generate a short, highly unique ID that will never violate primary key constraints
     const uniqueSuffix = crypto.randomBytes(4).toString("hex").toUpperCase(); // e.g., "A1B2C3D4"
     const transactionId = `TXN_${Date.now()}_${uniqueSuffix}`;
 
-    // Create entry in database securely
+    // Create entry in database securely matching the schema definitions
     await prisma.payment.create({
       data: {
+        transactionId: transactionId,
         phone: normalizedPhone,
         amount: Number(amount),
-        transactionId,
-        macAddress,
-        status: "pending"
+        macAddress: macAddress,
+        status: "pending",
+        package: pkg || null,     // ✅ Safely passes package selection to DB matching Prisma schema field name
+        speed: speed || null      // ✅ Optional network speed tracker
       }
     });
 
@@ -70,7 +72,7 @@ router.post("/payments/initiate", async (req, res) => {
       console.error("Failed to persist mpesa_ref:", e);
     }
 
-    // Return JSON data instead of raw HTML so your client app can read it perfectly!
+    // Return clean JSON data to the frontend
     return res.status(200).json({
       success: true,
       message: "STK Push sent successfully!",
